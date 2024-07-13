@@ -338,15 +338,12 @@ defmodule VideoLive do
 end
 ```
 
+## Run it!
+
 ```elixir
 VideoLive.new()
 ```
 
-The PeerConnection server-side is now populated:
-
-```elixir
-RtcServer.peek_state()
-```
 
 ## Javascript face detection drawing
 
