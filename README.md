@@ -29,12 +29,14 @@ We broadcast it back in another `<video`> element.
 
 ## How to use this?
 
-```elixir
+
 The repo contains the model data used by `face-api`.
 
 You can run the Livebook:
 
-```
+
+[![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fdwyl%2FWebRTC-SFU-demo%2Fblob%2Fmain%2Flib%2Fecho.livemd)
+
 
 ## The WebRTC flow without the face detection addition
 
