@@ -368,7 +368,7 @@ We use this transformed stream and add it to the PeerConnection track. Et voilà
 
 Note that `Kino.JS.Live` expects to receive an exported `init` function as "main.js".
 
-```elixir
+```js
 // lib/assets/main.js
 
 export async function init(ctx, html) {
@@ -477,118 +477,5 @@ export async function init(ctx, html) {
 
   run();
 }
-
-```
-
-```elixir
-
-    import * as faceapi from "/@vladmandic/face-api";
-
-    export async function init(ctx, html) {
-      ctx.importCSS("main.css");
-      ctx.root.innerHTML = html;
-
-      console.log(faceapi);
-
-      const iceConf = {
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-      };
-
-      async function run() {
-        let stream = await window.navigator.mediaDevices.getUserMedia({
-          video: { width: 300, height: 300 },
-          audio: false,
-        });
-
-        // display the webcam in a <video> tag
-        const videoIn = document.getElementById("source");
-        videoIn.srcObject = stream;
-
-        //----------------------- WEBRTC-----------------------------
-        const pc = new RTCPeerConnection(iceConf);
-
-        // capture local MediaStream (from the webcam)
-        const tracks = stream.getTracks();
-        tracks.forEach((track) => pc.addTrack(track, stream));
-
-        // send offer to any peer connected on the signaling channel
-        pc.onicecandidate = ({ candidate }) => {
-          if (candidate === null) {
-            return;
-          }
-          ctx.pushEvent("ice", { candidate: candidate.toJSON(), type: "ice" });
-        };
-
-        // send offer to any peer connected on the signaling channel
-        pc.onnegotiationneeded = async () => {
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          console.log("--> Offer created and sent");
-          ctx.pushEvent("offer", { sdp: offer });
-        };
-
-        // received from the remote peer (Elixir SFU server here) via UDP
-        pc.ontrack = ({ streams }) => {
-          console.log("--> Received remote track");
-          const echo = document.querySelector("#echo");
-          echo.srcObject = streams[0];
-        };
-
-        // received from the remote peer via signaling channel (Elixir server)
-        ctx.handleEvent("ice", async ({ candidate }) => {
-          await pc.addIceCandidate(candidate);
-        });
-
-        ctx.handleEvent("answer", async (msg) => {
-          console.log("--> handled Answer");
-          await pc.setRemoteDescription(msg);
-        });
-
-        // internal WebRTC listener, for information or other action...
-        pc.onconnectionstatechange = () => {
-          console.log("~~> Connection state: ", pc.connectionState);
-        };
-
-        // -------------------face-api ------------------
-        await faceapi.nets.tinyFaceDetector.loadFromUri("/models/face-api");
-
-        const displaySize = {
-          width: videoIn.width,
-          height: videoIn.height,
-        };
-        console.log(displaySize);
-
-        let canvas = null,
-          isRecordingStopped = false,
-          videoCallbackId;
-        canvas = faceapi.createCanvasFromMedia(videoIn);
-        conosle.log(canvas);
-        faceapi.matchDimensions(canvas, displaySize);
-
-        if ("requestVideoFrameCallback" in HTMLVideoElement.prototype) {
-          // draw the animation at the video rate, not at the browser rate
-          await videoIn.requestVideoFrameCallback(drawAtVideoRate);
-        } else {
-          alert(
-            "The 'face-api.js' and 'requestVideoFrame' is not supported with this browser"
-          );
-          return;
-        }
-
-        async function drawAtVideoRate() {
-          const context = canvas.getContext("2d");
-          context.drawImage(videoIn, 0, 0, displaySize.width, displaySize.height);
-          const detections = await faceapi.detectAllFaces(
-            videoIn,
-            new faceapi.TinyFaceDetectorOptions()
-          );
-          const resizedDetections = faceapi.resizeResults(detections, displaySize);
-          faceapi.draw.drawDetections(canvas, resizedDetections);
-          videoIn.requestVideoFrameCallback(drawAtVideoRate);
-        }
-      }
-      window.addEventListener("domLoaded", () => run());
-      run();
-    }
 
 ```
