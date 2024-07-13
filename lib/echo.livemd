@@ -3,16 +3,8 @@
 ```elixir
 Mix.install([
   {:kino, "~> 0.13.1"},
-  {:ex_webrtc, "~> 0.3.0"},
-  {:bandit, "~> 1.5"},
-  {:plug, "~> 1.16"},
-  {:corsica, "~> 2.1"}
+  {:ex_webrtc, "~> 0.3.0"}
 ])
-
-if :ets.whereis(:table) == :undefined, do: 
-  :ets.new(:path, [:named_table, :public])
-
-:ets.insert(:path, {:base, "https://raw.githubusercontent.com/dwyl/WebRTC-SFU-demo/main/lib/echo.livemd"})
 ```
 
 ## What are we doing?
@@ -217,32 +209,8 @@ end
 
 We will start the RTC GenServer.
 
-We will also start an endpoint on port 4001 only to send to the `face-api` Javacsript library the data of the model needed to run the dace detection process.
-
 ```elixir
-defmodule FileServer do
-  use Plug.Router
-
-  plug Corsica, origins: "*", allow_methods: :all
-  plug :match
-  plug :dispatch
-
-  get "/model/face-api/:file" do
-    %{"file" => file} = conn.params
-    [{:base, base}] = :ets.lookup(:path, :base)
-    path = base <> "lib/assets/model/"
-    if File.exists?(Path.join(path, file)) do
-      send_file(conn, 200, Path.join(path, file))
-    else
-      send_resp(conn, 404, "not found")
-    end
-  end
-end
-
-#webserver = {Bandit, plug: FileServer, port: 4001}
-Bandit.start_link(plug: FileServer, port: 4001)
-
-Supervisor.start_link([RtcServer], strategy: :one_for_one, name: MySup)
+Supervisor.start_link([RtcServer], strategy: :one_for_one)
 ```
 
 We instantiate a new PeerConnection:
@@ -267,15 +235,6 @@ Once the connection is set, the client will receive RTP packets and digest them 
 We use a `Kino.JS.Live` since we obviously need a signaling channel  (the Live WebSocket).
 
 ```elixir
-defmodule BasePath do
-  def fetch() do
-    [{:base, base}] = :ets.lookup(:path, :base)
-    base
-  end
-end
-```
-
-```elixir
 defmodule VideoLive do
   # GenServer to communicate between browser and Livebook server
 
@@ -298,7 +257,7 @@ defmodule VideoLive do
     </div>
   """
 
-  assert "main.css" do
+  asset "main.css" do
   """
     #elt {
       display: flex;
@@ -337,7 +296,7 @@ defmodule VideoLive do
 
       // -------------------face-api ------------------
       await faceapi.nets.tinyFaceDetector.loadFromUri(
-        "https://github.com/dwyl/webrtc-sfu-demo/blob/main/assets/model/"
+        "https://raw.githubusercontent.com/dwyl/WebRTC-SFU-demo/main/lib/assets/model"
       );
 
     async function processFrames(video) {
@@ -462,120 +421,10 @@ VideoLive.new()
 ```
 
 
-## Javascript face detection drawing
+## Note on the Javascript face detection drawing
 
 It relies on the method [`requestVideoFrameCallback`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLVideoElement/requestVideoFrameCallback).
 
 You can transform each frame of a video stream, _at the rate of the video_, namely 30fps.
 
 We use this transformed stream and add it to the PeerConnection track. Et voilà.
-
-```js
-export async function init(ctx, html) {
-  ctx.importCSS("main.css");
-  ctx.root.innerHTML = html;
-  await ctx.importJS(
-    "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"
-  );
-
-  const iceConf = {
-    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-  };
-
-  async function run() {
-    console.log("Starting.....");
-    let stream = await window.navigator.mediaDevices.getUserMedia({
-      video: { width: 300, height: 300 },
-      audio: false,
-    });
-
-    // display the webcam in a <video> tag
-    const videoIn = document.getElementById("source");
-    videoIn.srcObject = stream;
-    await videoIn.play();
-
-    // -------------------face-api ------------------
-    await faceapi.nets.tinyFaceDetector.loadFromUri(
-      "http://localhost:4001/model/face-api"
-    );
-
-    async function processFrames(video) {
-      const displaySize = {
-        width: video.width,
-        height: video.height,
-      };
-
-      let canvas = faceapi.createCanvasFromMedia(video);
-      faceapi.matchDimensions(canvas, displaySize);
-
-      async function drawAtVideoRate() {
-        const context = canvas.getContext("2d");
-        context.drawImage(video, 0, 0, displaySize.width, displaySize.height);
-        const detections = await faceapi.detectAllFaces(
-          video,
-          new faceapi.TinyFaceDetectorOptions()
-        );
-        const resizedDetections = faceapi.resizeResults(
-          detections,
-          displaySize
-        );
-        faceapi.draw.drawDetections(canvas, resizedDetections);
-        video.requestVideoFrameCallback(drawAtVideoRate);
-      }
-
-      video.requestVideoFrameCallback(drawAtVideoRate);
-      return canvas.captureStream(30); // 30 FPS
-    }
-
-    const transformedStream = await processFrames(videoIn);
-
-    //----------------------- WEBRTC-----------------------------
-    const pc = new RTCPeerConnection(iceConf);
-
-    // use the transformed MediaStream and add it to the PeerConnection
-    const tracks = transformedStream.getTracks();
-    tracks.forEach((track) => pc.addTrack(track, stream));
-
-    // send offer to any peer connected on the signaling channel
-    pc.onicecandidate = ({ candidate }) => {
-      if (candidate === null) {
-        return;
-      }
-      ctx.pushEvent("ice", { candidate: candidate.toJSON(), type: "ice" });
-    };
-
-    // send offer to any peer connected on the signaling channel
-    pc.onnegotiationneeded = async () => {
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      console.log("--> Offer created and sent");
-      ctx.pushEvent("offer", { sdp: offer });
-    };
-
-    // received from the remote peer (Elixir SFU server here) via UDP
-    pc.ontrack = ({ streams }) => {
-      console.log("--> Received remote track");
-      const echo = document.querySelector("#echo");
-      echo.srcObject = streams[0];
-    };
-
-    // received from the remote peer via signaling channel (Elixir server)
-    ctx.handleEvent("ice", async ({ candidate }) => {
-      await pc.addIceCandidate(candidate);
-    });
-
-    ctx.handleEvent("answer", async (msg) => {
-      console.log("--> handled Answer");
-      await pc.setRemoteDescription(msg);
-    });
-
-    // internal WebRTC listener, for information or other action...
-    pc.onconnectionstatechange = () => {
-      console.log("~~> Connection state: ", pc.connectionState);
-    };
-  }
-
-  run();
-}
-
-```
