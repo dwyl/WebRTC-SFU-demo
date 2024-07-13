@@ -279,7 +279,7 @@ end
 defmodule VideoLive do
   # GenServer to communicate between browser and Livebook server
 
-  use Kino.JS, assets_path: Path.join(BasePath.fetch(), "lib/assets")
+  use Kino.JS, assets_path:  "lib/assets"
   use Kino.JS.Live
 
   require Logger
