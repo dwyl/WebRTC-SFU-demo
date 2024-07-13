@@ -12,7 +12,7 @@ Mix.install([
 if :ets.whereis(:table) == :undefined, do: 
   :ets.new(:path, [:named_table, :public])
 
-:ets.insert(:path, {:base, "/"})
+:ets.insert(:path, {:base, "https://github.com/dwyl/WebRTC-SFU-demo/blob/main/"})
 ```
 
 ## What are we doing?
