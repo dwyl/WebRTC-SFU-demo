@@ -1,0 +1,11 @@
+#elt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+button {
+  margin-top: 1em;
+  margin-bottom: 1em;
+  padding: 1em;
+  background-color: bisque;
+}
