@@ -12,12 +12,14 @@ Mix.install([
 if :ets.whereis(:table) == :undefined, do:
   :ets.new(:path, [:named_table, :public])
 
-:ets.insert(:path, {:base, File.cwd!()<>"/code/elixir/webrtc-sfu-demo/"})
+:ets.insert(:path, {:base, "https://github.com/dwyl/WebRTC-SFU-demo/blob/main/"})
 ```
 
 ## What are we doing?
 
-We are illustrating the SFU server `ExWebRTC` by broadcasting our webcam via `WebRTC`.
+We are illustrating the SFU server `ExWebRTC` by broadcasting our webcam via `WebRTC`. 
+
+This is a **low** latency protocole running on UDP.
 
 We are **not** using the "standard" peer-to-peer WebRTC connection but we are connecting to an SFU server written in Elixir.
 
