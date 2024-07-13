@@ -369,7 +369,7 @@ defmodule VideoLive do
   """
   end
 
-  def new() do
+  def run() do
     Kino.JS.Live.new(__MODULE__, @html)
   end
 
@@ -409,8 +409,10 @@ defmodule VideoLive do
 end
 ```
 
+## Run it!
+
 ```elixir
-VideoLive.new()
+VideoLive.run()
 ```
 
 The PeerConnection server-side is now populated:
