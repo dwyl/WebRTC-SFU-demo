@@ -12,7 +12,7 @@ Mix.install([
 if :ets.whereis(:table) == :undefined, do: 
   :ets.new(:path, [:named_table, :public])
 
-:ets.insert(:path, {:base, File.cwd!()<>"/code/elixir/webrtc-sfu-demo/"})
+:ets.insert(:path, {:base, "/"})
 ```
 
 ## What are we doing?
@@ -29,12 +29,12 @@ We broadcast it back in another `<video`> element.
 
 ## How to use this?
 
-```elixir
+
 The repo contains the model data used by `face-api`.
 
 You can run the Livebook:
-  
-```
+
+[![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fdwyl%2FWebRTC-SFU-demo%2Fblob%2Fmain%2Flib%2Fecho.livemd)
 
 ## The WebRTC flow without the face detection addition
 
