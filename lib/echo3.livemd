@@ -36,7 +36,7 @@ Once connected, the Elixir SFU will receive the streams from the `<video 1>` via
 
 ### Information flow
 
-* The signaling process (instantiate the PeerConnection):
+- The signaling process (instantiate the PeerConnection):
 
 ```mermaid
 graph LR;
@@ -46,7 +46,7 @@ graph LR;
   L -- ws --> B1
 ```
 
-* The active connection:
+- The active connection:
 
 ```mermaid
 graph LR;
@@ -289,7 +289,7 @@ defmodule VideoLive do
 
   asset "main.js" do
     export async function init(ctx, html) {
-      importJS("https://raw.githubusercontent.com/dwyl/WebRTC-SFU-demo/main/lib/assets/dist/main.js")
+      await ctx.importJS("https://raw.githubusercontent.com/dwyl/WebRTC-SFU-demo/main/lib/assets/dist/main.js")
     }
   end
 
