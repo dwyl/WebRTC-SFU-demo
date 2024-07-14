@@ -9,7 +9,7 @@ Mix.install([
 
 ## What are we doing?
 
-We are illustrating the SFU server `ExWebRTC` by broadcasting our webcam via `WebRTC`. 
+We are illustrating the SFU server `ExWebRTC` by broadcasting our webcam via `WebRTC`.
 
 This is a **low** latency protocole running on UDP.
 
@@ -26,19 +26,13 @@ We broadcast it back in another `<video`> element.
 
 ## How to use this?
 
-Test assets:
-
-[![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fdwyl%2FWebRTC-SFU-demo%2Fblob%2Fmain%2Flib%2Fecho3.livemd)
-
-You can run this first Livebook:
+You can run this first Livebook which uses `face-api`.
 
 [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fdwyl%2FWebRTC-SFU-demo%2Fblob%2Fmain%2Flib%2Fecho.livemd)
 
 You will notice that the results are not so good when we run the model on each frame.
 
-An improvement of the previous Livebook: we compute one out of 10 frames and interpolation and run the computation in a [Web Worker](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API).
-
-The third uses the same technic but feaatures `MediaPipe`.
+The second Livebook uses `MediaPipe`.
 
 ## The WebRTC flow without the face detection addition
 
@@ -256,7 +250,6 @@ We use a `Kino.JS.Live` since we obviously need a signaling channel (the Live We
 > Github serves files from the repo but with a modified URL ("https://raw.githubusercontent.com...")
 > Kino does not load files from an URL, but from a location.
 
-
 ```elixir
 defmodule VideoLive do
   # GenServer to communicate between browser and Livebook server
@@ -332,11 +325,11 @@ defmodule VideoLive do
 
       //----------------------- WEBRTC-----------------------------
       const pc = new RTCPeerConnection(iceConf);
-  
+
       // capture local MediaStream (from the webcam)
       const tracks = transformedStream.getTracks();
       tracks.forEach((track) => pc.addTrack(track, stream));
-  
+
       // send offer to any peer connected on the signaling channel
       pc.onicecandidate = ({ candidate }) => {
         if (candidate === null) {
@@ -364,7 +357,7 @@ defmodule VideoLive do
       ctx.handleEvent("ice", async ({ candidate }) => {
         await pc.addIceCandidate(candidate);
       });
-  
+
       ctx.handleEvent("answer", async (msg) => {
         console.log("--> handled Answer");
         await pc.setRemoteDescription(msg);
