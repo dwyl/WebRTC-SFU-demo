@@ -1,9 +1,10 @@
-# Echo your face detection with the SFU ExWebRTC
+# Echo 3 your face detection with the SFU ExWebRTC
 
 ```elixir
 Mix.install([
   {:kino, "~> 0.13.1"},
-  {:ex_webrtc, "~> 0.3.0"}
+  {:ex_webrtc, "~> 0.3.0"},
+  {:req, "~> 0.5.2"}
 ])
 ```
 
@@ -240,6 +241,14 @@ We use a `Kino.JS.Live` since we obviously need a signaling channel (the Live We
 > Kino does not load files from an URL, but from a location.
 
 ```elixir
+defmodule Assets do
+  def fetch do
+    Req.get("https://raw.githubusercontent.com/dwyl/WebRTC-SFU-demo/main/lib/assets/dist/main.js").body
+  end
+end
+```
+
+```elixir
 defmodule VideoLive do
   # GenServer to communicate between browser and Livebook server
 
@@ -279,7 +288,65 @@ defmodule VideoLive do
   end
 
   asset "main.js" do
-  """
+    Assets.fetch()
+  end
+
+  def new() do
+    Kino.JS.Live.new(__MODULE__, @html)
+  end
+
+  @impl true
+  def init(html, ctx) do
+    {:ok, assign(ctx, html: html)}
+  end
+
+  @impl true
+  def handle_connect(ctx) do
+    {:ok, ctx.assigns.html, ctx}
+  end
+
+  # received from the browser via the signaling WebSocket, call server
+  @impl true
+  def handle_event("offer",%{"sdp" => sdp}, ctx) do
+    RtcServer.receive_signaling_msg({sdp, self()})
+    {:noreply, ctx}
+  end
+
+  def handle_event("ice",%{"candidate" => candidate}, ctx) do
+    RtcServer.receive_signaling_msg({%{"type" => "ice", "candidate" => candidate}, self()})
+    {:noreply, ctx}
+  end
+
+  # received from the server, send to the browser via signaling WebSocket
+  @impl true
+  def handle_info({:signaling, %{"type" => "answer"} = msg}, ctx) do
+    broadcast_event(ctx, "answer", msg)
+    {:noreply, ctx}
+  end
+
+  def handle_info({:signaling, %{"type" => "ice"} = msg}, ctx) do
+    if msg["candidate"], do: broadcast_event(ctx, "ice",msg)
+    {:noreply, ctx}
+  end
+end
+```
+
+## Run it!
+
+```elixir
+VideoLive.new()
+```
+
+## Note on the Javascript face detection drawing
+
+It relies on the method [`requestVideoFrameCallback`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLVideoElement/requestVideoFrameCallback).
+
+You can transform each frame of a video stream, _at the rate of the video_, namely 30fps.
+
+We use this transformed stream and add it to the PeerConnection track. Et voilà.
+
+```elixir
+"""
   export async function init(ctx, html) {
     ctx.importCSS("main.css");
     ctx.root.innerHTML = html;
@@ -376,58 +443,4 @@ defmodule VideoLive do
     run();
   }
   """
-  end
-
-  def new() do
-    Kino.JS.Live.new(__MODULE__, @html)
-  end
-
-  @impl true
-  def init(html, ctx) do
-    {:ok, assign(ctx, html: html)}
-  end
-
-  @impl true
-  def handle_connect(ctx) do
-    {:ok, ctx.assigns.html, ctx}
-  end
-
-  # received from the browser via the signaling WebSocket, call server
-  @impl true
-  def handle_event("offer",%{"sdp" => sdp}, ctx) do
-    RtcServer.receive_signaling_msg({sdp, self()})
-    {:noreply, ctx}
-  end
-
-  def handle_event("ice",%{"candidate" => candidate}, ctx) do
-    RtcServer.receive_signaling_msg({%{"type" => "ice", "candidate" => candidate}, self()})
-    {:noreply, ctx}
-  end
-
-  # received from the server, send to the browser via signaling WebSocket
-  @impl true
-  def handle_info({:signaling, %{"type" => "answer"} = msg}, ctx) do
-    broadcast_event(ctx, "answer", msg)
-    {:noreply, ctx}
-  end
-
-  def handle_info({:signaling, %{"type" => "ice"} = msg}, ctx) do
-    if msg["candidate"], do: broadcast_event(ctx, "ice",msg)
-    {:noreply, ctx}
-  end
-end
 ```
-
-## Run it!
-
-```elixir
-VideoLive.new()
-```
-
-## Note on the Javascript face detection drawing
-
-It relies on the method [`requestVideoFrameCallback`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLVideoElement/requestVideoFrameCallback).
-
-You can transform each frame of a video stream, _at the rate of the video_, namely 30fps.
-
-We use this transformed stream and add it to the PeerConnection track. Et voilà.

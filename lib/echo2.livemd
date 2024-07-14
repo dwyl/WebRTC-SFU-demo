@@ -15,7 +15,7 @@ This is a **low** latency protocole running on UDP.
 
 We are **not** using the "standard" peer-to-peer WebRTC connection but we are connecting to an SFU server written in Elixir.
 
-We transform the feed directly in the browser. It is mandatory to start with the "hello world" of computer vision, namely face detection. We use the library [`face-api`](https://www.npmjs.com/package/@vladmandic/face-api?activeTab=readme). You will notice that the results are not so good!
+We transform the feed directly in the browser. It is mandatory to start with the "hello world" of computer vision, namely face detection. We use the library [``](https://ai.google.dev/edge/mediapipe/solutions/vision/face_detector/web_js(https://www.npmjs.com/package/@vladmandic/face-api?activeTab=readme). You will notice that the results are not so good!
 
 The transformed stream will be sent to the SFU server.
 
@@ -231,7 +231,7 @@ On connection, a new `PeerConnection` is created. Since the server is already co
 
 Once the connection is set, the client will receive RTP packets and digest them into a `<video>` element.
 
-We use a `Kino.JS.Live` since we obviously need a signaling channel (the Live WebSocket).
+We use a `Kino.JS.Live` since we obviously need a signaling channel  (the Live WebSocket).
 
 > Kino expects us to code a "main.js" module that exports and init function
 
@@ -251,12 +251,12 @@ defmodule VideoLive do
   @html """
     <div id="elt">
       <figure>
-        <video id="source" width="400" height="400" muted autoplay playsinline></video>
+        <video id="source" width="500" height="500" muted autoplay playsinline></video>
         <figcaption>Local webcam</figcaption>
       </figure>
       <br/>
       <figure>
-        <video id="echo" width="400" height="400" autoplay muted playsinline></video>
+        <video id="echo" width="500" height="500" autoplay muted playsinline></video>
         <figcaption>Echo webcam</figcaption>
       </figure>
     </div>
@@ -287,8 +287,8 @@ defmodule VideoLive do
 
     async function run() {
       console.log("Starting.....");
-      const videoIn = document.getElementById("source"),
-        stream = await window.navigator.mediaDevices.getUserMedia({
+      const videoIn = document.getElementById("source");
+      const stream = await window.navigator.mediaDevices.getUserMedia({
         video: { width: 300, height: 300 },
         audio: false,
       });
@@ -301,39 +301,82 @@ defmodule VideoLive do
         "https://raw.githubusercontent.com/dwyl/WebRTC-SFU-demo/main/lib/assets/model"
       );
 
-    const displaySize = {width: video.width, height: video.height};
+      let transformedStream = null;
+  
+      const displaySize = {width: videoIn.width, height: videoIn.height},
+          canvas = faceapi.createCanvasFromMedia(videoIn),
+          context = canvas.getContext("2d"),
+          f = 10;
 
-    async function processFrames(video) {
-      let canvas = faceapi.createCanvasFromMedia(video),
-        context = canvas.getContext("2d");
+      async function processFrames(video) {
+        faceapi.matchDimensions(canvas, displaySize);
+  
+        let count = 0, detections = [], lastDetectedFaces  = [];
+  
+        async function drawFacesAtVideoRate() {
+          console.log(count)
+          context.drawImage(video, 0, 0, displaySize.width, displaySize.height);
+  
+          if (count % f == 0) {
+            const lastDetectedFaces = await faceapi.detectAllFaces(
+              video, 
+              new faceapi.TinyFaceDetectorOptions()
+            );
+            drawDetections(lastDetectedFaces)
+          } else {
+            const interpolatedDetections = 
+              interpolateDetections(lastDetectedFaces, detections, (count % f) * f);
+            drawDetections(interpolatedDetections)
+          }
 
-      faceapi.matchDimensions(canvas, displaySize);
+          count++;
+          video.requestVideoFrameCallback(drawFacesAtVideoRate);
+  
+        }
 
-      async function drawAtVideoRate() {
-        context.drawImage(video, 0, 0, displaySize.width, displaySize.height);
-        const detections = await faceapi.detectAllFaces(
-          video,
-          new faceapi.TinyFaceDetectorOptions()
-        );
-        const resizedDetections = faceapi.resizeResults(detections,displaySize);
-        faceapi.draw.drawDetections(canvas, resizedDetections);
-        video.requestVideoFrameCallback(drawAtVideoRate);
-      }
+        function drawDetections(detections) {
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+          faceapi.draw.drawDetections(canvas, detections);
+        }
 
-        video.requestVideoFrameCallback(drawAtVideoRate);
+        video.requestVideoFrameCallback(drawFacesAtVideoRate);
         return canvas.captureStream(30); // 30 FPS
       }
 
-      const transformedStream = await processFrames(videoIn);
+      
+      const interpolate = (start, end, n) => start + (end-start) * n
+    
+      function interpolateDetections(last, current, n) {
+        if (last.length !== current.length) {
+          return current
+        }
+        // linear interpolation for the bounding boxes
+        return current.map((detection, idx) => {
+            const last = last[idx] || detection;
+            const interpolatedBox = new faceapi.Box(
+                interpolateValue(last.box.x, detection.box.x, n),
+                interpolateValue(last.box.y, detection.box.y, n),
+                interpolateValue(last.box.width, detection.box.width, n),
+                interpolateValue(last.box.height, detection.box.height, n)
+            );
+            return new faceapi.FaceDetection(detection.score, interpolatedBox);
+        });
+      }
+
 
       //----------------------- WEBRTC-----------------------------
       const iceConf = {iceServers: [{ urls: "stun:stun.l.google.com:19302" }]};
       const pc = new RTCPeerConnection(iceConf);
-
-      // capture local MediaStream (from the webcam)
-      const tracks = transformedStream.getTracks();
-      tracks.forEach((track) => pc.addTrack(track, stream));
-
+  
+      // capture local MediaStream (from the webcam) and use the transformed frames
+      //videoIn.onloadeddata = async () => {
+        console.log("video ready")
+        transformedStream = await processFrames(videoIn);
+        const tracks = transformedStream.getTracks();
+        tracks.forEach((track) => pc.addTrack(track, stream));
+      //}
+  
       // send offer to any peer connected on the signaling channel
       pc.onicecandidate = ({ candidate }) => {
         if (candidate === null) {
@@ -361,7 +404,7 @@ defmodule VideoLive do
       ctx.handleEvent("ice", async ({ candidate }) => {
         await pc.addIceCandidate(candidate);
       });
-
+  
       ctx.handleEvent("answer", async (msg) => {
         console.log("--> handled Answer");
         await pc.setRemoteDescription(msg);
