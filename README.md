@@ -15,7 +15,7 @@ This is a **low** latency protocole running on UDP.
 
 We are **not** using the "standard" peer-to-peer WebRTC connection but we are connecting to an SFU server written in Elixir.
 
-We transform the feed directly in the browser. It is mandatory to start with the "hello world" of computer vision, namely face detection. We use the library [`face-api`](https://www.npmjs.com/package/@vladmandic/face-api?activeTab=readme).
+We transform the feed directly in the browser. It is mandatory to start with the "hello world" of computer vision, namely face detection. We use the library [`face-api`](https://www.npmjs.com/package/@vladmandic/face-api?activeTab=readme). You will notice that the results are not so good.
 
 The transformed stream will be sent to the SFU server.
 
@@ -244,6 +244,10 @@ Once the connection is set, the client will receive RTP packets and digest them 
 
 We use a `Kino.JS.Live` since we obviously need a signaling channel (the Live WebSocket).
 
+> Kino expects us to code a "main.js" module that exports and `init` function
+> Github serves files from the repo but with a modified URL ("https://raw.githubusercontent.com...")
+> Kino does not load files from an URL, but from a location.
+
 
 ```elixir
 defmodule VideoLive do
@@ -257,12 +261,12 @@ defmodule VideoLive do
   @html """
     <div id="elt">
       <figure>
-        <video id="source" width="400" height="400" muted autoplay playsinline></video>
+        <video id="source" width="500" height="500" muted autoplay playsinline></video>
         <figcaption>Local webcam</figcaption>
       </figure>
       <br/>
       <figure>
-        <video id="echo" width="400" height="400" autoplay muted playsinline></video>
+        <video id="echo" width="500" height="500" autoplay muted playsinline></video>
         <figcaption>Echo webcam</figcaption>
       </figure>
     </div>
@@ -428,119 +432,3 @@ It relies on the method [`requestVideoFrameCallback`](https://developer.mozilla.
 You can transform each frame of a video stream, _at the rate of the video_, namely 30fps.
 
 We use this transformed stream and add it to the PeerConnection track. Et voilà.
-
-### The code
-
-Note that `Kino.JS.Live` expects to receive an exported `init` function as "main.js".
-
-```js
-// lib/assets/main.js
-
-export async function init(ctx, html) {
-  ctx.importCSS("main.css");
-  ctx.root.innerHTML = html;
-  await ctx.importJS(
-    "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"
-  );
-
-  const iceConf = {
-    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-  };
-
-  async function run() {
-    console.log("Starting.....");
-    let stream = await window.navigator.mediaDevices.getUserMedia({
-      video: { width: 300, height: 300 },
-      audio: false,
-    });
-
-    // display the webcam in a <video> tag
-    const videoIn = document.getElementById("source");
-    videoIn.srcObject = stream;
-    await videoIn.play();
-
-    // -------------------face-api ------------------
-    await faceapi.nets.tinyFaceDetector.loadFromUri(
-      "http://localhost:4001/model/face-api"
-    );
-
-    async function processFrames(video) {
-      const displaySize = {
-        width: video.width,
-        height: video.height,
-      };
-
-      let canvas = faceapi.createCanvasFromMedia(video);
-      faceapi.matchDimensions(canvas, displaySize);
-
-      async function drawAtVideoRate() {
-        const context = canvas.getContext("2d");
-        context.drawImage(video, 0, 0, displaySize.width, displaySize.height);
-        const detections = await faceapi.detectAllFaces(
-          video,
-          new faceapi.TinyFaceDetectorOptions()
-        );
-        const resizedDetections = faceapi.resizeResults(
-          detections,
-          displaySize
-        );
-        faceapi.draw.drawDetections(canvas, resizedDetections);
-        video.requestVideoFrameCallback(drawAtVideoRate);
-      }
-
-      video.requestVideoFrameCallback(drawAtVideoRate);
-      return canvas.captureStream(30); // 30 FPS
-    }
-
-    const transformedStream = await processFrames(videoIn);
-
-    //----------------------- WEBRTC-----------------------------
-    const pc = new RTCPeerConnection(iceConf);
-
-    // use the transformed MediaStream and add it to the PeerConnection
-    const tracks = transformedStream.getTracks();
-    tracks.forEach((track) => pc.addTrack(track, stream));
-
-    // send offer to any peer connected on the signaling channel
-    pc.onicecandidate = ({ candidate }) => {
-      if (candidate === null) {
-        return;
-      }
-      ctx.pushEvent("ice", { candidate: candidate.toJSON(), type: "ice" });
-    };
-
-    // send offer to any peer connected on the signaling channel
-    pc.onnegotiationneeded = async () => {
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      console.log("--> Offer created and sent");
-      ctx.pushEvent("offer", { sdp: offer });
-    };
-
-    // received from the remote peer (Elixir SFU server here) via UDP
-    pc.ontrack = ({ streams }) => {
-      console.log("--> Received remote track");
-      const echo = document.querySelector("#echo");
-      echo.srcObject = streams[0];
-    };
-
-    // received from the remote peer via signaling channel (Elixir server)
-    ctx.handleEvent("ice", async ({ candidate }) => {
-      await pc.addIceCandidate(candidate);
-    });
-
-    ctx.handleEvent("answer", async (msg) => {
-      console.log("--> handled Answer");
-      await pc.setRemoteDescription(msg);
-    });
-
-    // internal WebRTC listener, for information or other action...
-    pc.onconnectionstatechange = () => {
-      console.log("~~> Connection state: ", pc.connectionState);
-    };
-  }
-
-  run();
-}
-
-```
