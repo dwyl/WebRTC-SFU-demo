@@ -15,7 +15,12 @@ This is a **low** latency protocole running on UDP.
 
 We are **not** using the "standard" peer-to-peer WebRTC connection but we are connecting to an SFU server written in Elixir.
 
-We transform the feed directly in the browser. It is mandatory to start with the "hello world" of computer vision, namely face detection. We use the library [`face-api`](https://www.npmjs.com/package/@vladmandic/face-api?activeTab=readme). You will notice that the results are not so good.
+We transform the feed directly in the browser. It is mandatory to start with the "hello world" of computer vision, namely face detection. 
+
+We will use two libraries:
+
+- the library [`face-api`](https://www.npmjs.com/package/@vladmandic/face-api?activeTab=readme). You will notice that the results are not so good when we run the model on each frame.
+- the library [`MediaPipe](https://github.com/tensorflow/tfjs-models/tree/master/face-detection) from [Tensorflow.js](https://www.tensorflow.org/js/models).
 
 The transformed stream will be sent to the SFU server.
 
@@ -26,11 +31,15 @@ We broadcast it back in another `<video`> element.
 
 The repo contains the model data used by `face-api`.
 
-You can run the Livebook:
+You can run this first Livebook:
 
 
 [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fdwyl%2FWebRTC-SFU-demo%2Fblob%2Fmain%2Flib%2Fecho.livemd)
 
+
+A refinment of the previous Livebook: we compute interpolation between really computed frames, one out of 10, and the computation is done in a [Web Worker](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API).
+
+The third uses the same technic but feaatures MediaPipe.
 
 ## The WebRTC flow without the face detection addition
 
