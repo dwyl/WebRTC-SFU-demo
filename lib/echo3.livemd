@@ -243,7 +243,7 @@ We use a `Kino.JS.Live` since we obviously need a signaling channel (the Live We
 ```elixir
 defmodule Assets do
   def fetch_js do
-    Req.get("https://raw.githubusercontent.com/dwyl/WebRTC-SFU-demo/main/lib/assets/main.js").body
+    Req.get!("https://raw.githubusercontent.com/dwyl/WebRTC-SFU-demo/main/lib/assets/main.js").body
   end
 end
 ```
