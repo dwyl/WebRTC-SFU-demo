@@ -288,7 +288,9 @@ defmodule VideoLive do
   end
 
   asset "main.js" do
-    Assets.fetch()
+    export async function init(ctx, html) {
+      importJS("https://raw.githubusercontent.com/dwyl/WebRTC-SFU-demo/main/lib/assets/dist/main.js")
+    }
   end
 
   def new() do

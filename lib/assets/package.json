@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "esbuild main.js --bundle --minify --sourcemap --target=es2022  --outfile=dist/main.js"
+    "build": "esbuild new.js --bundle --minify --sourcemap --target=es2022  --outfile=dist/main.js"
   },
   "keywords": [],
   "author": "",
