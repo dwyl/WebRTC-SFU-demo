@@ -15,7 +15,7 @@ This is a **low** latency protocole running on UDP.
 
 We are **not** using the "standard" peer-to-peer WebRTC connection but we are connecting to an SFU server written in Elixir.
 
-We transform the feed directly in the browser. It is mandatory to start with the "hello world" of computer vision, namely face detection. We use the library [`face-api`](https://www.npmjs.com/package/@vladmandic/face-api?activeTab=readme).
+We transform the feed directly in the browser. It is mandatory to start with the "hello world" of computer vision, namely face detection. We use the library [`face-api`](https://www.npmjs.com/package/@vladmandic/face-api?activeTab=readme). You will notice that the results are not so good!
 
 The transformed stream will be sent to the SFU server.
 
@@ -233,6 +233,12 @@ On connection, a new `PeerConnection` is created. Since the server is already co
 Once the connection is set, the client will receive RTP packets and digest them into a `<video>` element.
 
 We use a `Kino.JS.Live` since we obviously need a signaling channel  (the Live WebSocket).
+
+> Kino expects us to code a "main.js" module that exports and init function
+
+> Github serves files from the repo but with a modified URL ("https://raw.githubusercontent.com...").
+
+> Kino does not load files from an URL, but from a location.
 
 ```elixir
 defmodule VideoLive do
