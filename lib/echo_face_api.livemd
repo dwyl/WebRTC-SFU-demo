@@ -1,4 +1,4 @@
-# Echo 3 your face detection with the SFU ExWebRTC
+# Echo your face detection with the SFU ExWebRTC and "face-api"
 
 ```elixir
 Mix.install([
