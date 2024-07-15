@@ -20,8 +20,8 @@ We are **not** using the "standard" peer-to-peer WebRTC connection but we are co
 
 We transform the input directly in the browser. Since it is mandatory to start with the "hello world" of computer vision, namely face detection, we will use two libraries:
 
-- the library [`face-api`](https://www.npmjs.com/package/@vladmandic/face-api?activeTab=readme).
-- the library [`MediaPipe`](https://github.com/tensorflow/tfjs-models/tree/master/face-detection) from [Tensorflow.js](https://www.tensorflow.org/js/models).
+- the library <mark>[`face-api`](https://www.npmjs.com/package/@vladmandic/face-api?activeTab=readme)</mark>.
+- the library <mark>[`MediaPipe`](https://github.com/tensorflow/tfjs-models/tree/master/face-detection)</mark> from [Tensorflow.js](https://www.tensorflow.org/js/models).
 
 The transformed stream will be sent to the SFU server via WebRTC.
 
