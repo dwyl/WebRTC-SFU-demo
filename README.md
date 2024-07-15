@@ -9,7 +9,9 @@ Mix.install([
 
 ## What are we doing?
 
-We are illustrating the SFU server `ExWebRTC` by broadcasting our webcam via `WebRTC`.
+We illustrate the SFU server [`ExWebRTC`](https://github.com/elixir-webrtc/ex_webrtc) by broadcasting our webcam via `WebRTC`.
+
+`ExWebRTC` is an Elixir port of the [WebRTC API](https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API).
 
 This is a **low** latency protocole running on UDP.
 
@@ -20,19 +22,21 @@ We transform the feed directly in the browser. Since it is mandatory to start wi
 - the library [`face-api`](https://www.npmjs.com/package/@vladmandic/face-api?activeTab=readme).
 - the library [`MediaPipe`](https://github.com/tensorflow/tfjs-models/tree/master/face-detection) from [Tensorflow.js](https://www.tensorflow.org/js/models).
 
-The transformed stream will be sent to the SFU server.
+The transformed stream will be sent to the SFU server via WebRTC.
 
-We broadcast it back in another `<video`> element.
+The Elixir server will broadcast it back, into another `<video`> element of our page in this demo.
 
 ## How to use this?
 
 You can run this first Livebook which uses `face-api`.
 
-[![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fdwyl%2FWebRTC-SFU-demo%2Fblob%2Fmain%2Flib%2Fecho.livemd)
+[![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fdwyl%2FWebRTC-SFU-demo%2Fblob%2Fmain%2Flib%2Fecho_face_api.livemd)
 
 You will notice that the results are not so good when we run the model on each frame.
 
-The second Livebook uses `MediaPipe`.
+The second Livebook uses `MediaPipe`. This is **much** more performant.
+
+[![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fdwyl%2FWebRTC-SFU-demo%2Fblob%2Fmain%2Flib%2Fecho_mediapipe.livemd)
 
 ## The WebRTC flow without the face detection addition
 
