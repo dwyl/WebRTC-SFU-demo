@@ -4,6 +4,7 @@
 Mix.install([
   {:kino, "~> 0.13.1"},
   {:ex_webrtc, "~> 0.3.0"},
+  {:req, "~> 0.5"}
 ])
 ```
 
@@ -15,9 +16,9 @@ We illustrate the SFU server [`ExWebRTC`](https://github.com/elixir-webrtc/ex_we
 
 This is a **low** latency protocole running on UDP.
 
-We are **not** using the "standard" peer-to-peer WebRTC connection but we are connecting to an SFU server written in Elixir.
+We are **not** using the "standard" peer-to-peer WebRTC connection but we are connecting the input feed - the browser's built-in webcam - to an SFU server written in Elixir.
 
-We transform the feed directly in the browser. Since it is mandatory to start with the "hello world" of computer vision, namely face detection, we will use two libraries:
+We transform the input directly in the browser. Since it is mandatory to start with the "hello world" of computer vision, namely face detection, we will use two libraries:
 
 - the library [`face-api`](https://www.npmjs.com/package/@vladmandic/face-api?activeTab=readme).
 - the library [`MediaPipe`](https://github.com/tensorflow/tfjs-models/tree/master/face-detection) from [Tensorflow.js](https://www.tensorflow.org/js/models).
@@ -32,9 +33,9 @@ You can run this first Livebook which uses `face-api`.
 
 [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fdwyl%2FWebRTC-SFU-demo%2Fblob%2Fmain%2Flib%2Fecho_face_api.livemd)
 
-You will notice that the results are not so good when we run the model on each frame.
+You will notice that the results are not so good. You have a lot of negative findings.
 
-The second Livebook uses `MediaPipe`. This is **much** more performant.
+The second Livebook uses `MediaPipe`. This is **much** more performant. Recall that each frame (30 fps) are detected and rebuilt and broadcasted to the Elixir server to broadcast back in the video element below the input.
 
 [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fdwyl%2FWebRTC-SFU-demo%2Fblob%2Fmain%2Flib%2Fecho_mediapipe.livemd)
 
@@ -278,104 +279,7 @@ defmodule VideoLive do
   """
 
   asset "main.js" do
-  """
-  export async function init(ctx, html) {
-    ctx.importCSS("main.css");
-    ctx.root.innerHTML = html;
-    await ctx.importJS("https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js");
-
-    const iceConf = {iceServers: [{ urls: "stun:stun.l.google.com:19302" }]};
-
-    async function run() {
-      console.log("Starting.....");
-      let stream = await window.navigator.mediaDevices.getUserMedia({
-        video: { width: 300, height: 300 },
-        audio: false,
-      });
-
-      // display the webcam in a <video> tag
-      const videoIn = document.getElementById("source");
-      videoIn.srcObject = stream;
-      await videoIn.play();
-
-      // -------------------face-api ------------------
-      await faceapi.nets.tinyFaceDetector.loadFromUri(
-        "https://raw.githubusercontent.com/dwyl/WebRTC-SFU-demo/main/lib/assets/model"
-      );
-
-    async function processFrames(video) {
-      const displaySize = {width: video.width, height: video.height};
-
-      let canvas = faceapi.createCanvasFromMedia(video);
-      faceapi.matchDimensions(canvas, displaySize);
-
-      async function drawAtVideoRate() {
-        const context = canvas.getContext("2d");
-        context.drawImage(video, 0, 0, displaySize.width, displaySize.height);
-        const detections = await faceapi.detectAllFaces(
-          video,
-          new faceapi.TinyFaceDetectorOptions()
-        );
-        const resizedDetections = faceapi.resizeResults(detections,displaySize);
-        faceapi.draw.drawDetections(canvas, resizedDetections);
-        video.requestVideoFrameCallback(drawAtVideoRate);
-      }
-
-        video.requestVideoFrameCallback(drawAtVideoRate);
-        return canvas.captureStream(30); // 30 FPS
-      }
-
-      const transformedStream = await processFrames(videoIn);
-
-      //----------------------- WEBRTC-----------------------------
-      const pc = new RTCPeerConnection(iceConf);
-
-      // capture local MediaStream (from the webcam)
-      const tracks = transformedStream.getTracks();
-      tracks.forEach((track) => pc.addTrack(track, stream));
-
-      // send offer to any peer connected on the signaling channel
-      pc.onicecandidate = ({ candidate }) => {
-        if (candidate === null) {
-          return;
-        }
-        ctx.pushEvent("ice", { candidate: candidate.toJSON(), type: "ice" });
-      };
-
-      // send offer to any peer connected on the signaling channel
-      pc.onnegotiationneeded = async () => {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        console.log("--> Offer created and sent");
-        ctx.pushEvent("offer", { sdp: offer });
-      };
-
-      // received from the remote peer (Elixir SFU server here) via UDP
-      pc.ontrack = ({ streams }) => {
-        console.log("--> Received remote track");
-        const echo = document.querySelector("#echo");
-        echo.srcObject = streams[0];
-      };
-
-      // received from the remote peer via signaling channel (Elixir server)
-      ctx.handleEvent("ice", async ({ candidate }) => {
-        await pc.addIceCandidate(candidate);
-      });
-
-      ctx.handleEvent("answer", async (msg) => {
-        console.log("--> handled Answer");
-        await pc.setRemoteDescription(msg);
-      });
-
-      // internal WebRTC listener, for information or other action...
-      pc.onconnectionstatechange = () => {
-        console.log("~~> Connection state: ", pc.connectionState);
-      };
-    }
-
-    run();
-  }
-  """
+    Assets.fetch_js()
   end
 
   def run() do
@@ -437,3 +341,135 @@ It relies on the method [`requestVideoFrameCallback`](https://developer.mozilla.
 You can transform each frame of a video stream, _at the rate of the video_, namely 30fps.
 
 We use this transformed stream and add it to the PeerConnection track. Et voilà.
+
+The `mediaPipe` library uses `
+
+```js
+import {
+  FaceDetector,
+  FilesetResolver,
+} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0";
+
+export async function init(ctx, html) {
+  ctx.importCSS("main.css");
+  ctx.root.innerHTML = html;
+
+  async function run() {
+    console.log("Starting.....");
+    const videoIn = document.getElementById("source"),
+      display = { width: videoIn.width, height: videoIn.height },
+      canvas = document.createElement("canvas"),
+      context = canvas.getContext("2d"),
+      stream = await window.navigator.mediaDevices.getUserMedia({
+        video: display,
+        audio: false,
+      });
+
+    videoIn.srcObject = stream;
+    await videoIn.play();
+
+    // -------------------mediaPipe-api ------------------
+    canvas.height = display.height;
+    canvas.width = display.width;
+
+    let faceDetector;
+
+    // Loads the MediaPipe Face Detector model and begins detecting faces in the input video.
+    const initializeFaceDetector = async () => {
+      const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
+      );
+      faceDetector = await FaceDetector.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite`,
+          delegate: "GPU",
+        },
+        runningMode: "VIDEO",
+      });
+      await predictWebcam();
+    };
+
+    async function predictWebcam() {
+      const detections = await faceDetector.detectForVideo(
+        videoIn,
+        performance.now()
+      );
+      displayVideoDetections(detections.detections);
+      window.requestVideoFrameCallback(predictWebcam);
+    }
+
+    function displayVideoDetections(detections) {
+      context.clearRect(0, 0, display.width, display.height);
+      context.drawImage(videoIn, 0, 0, display.width, display.height);
+
+      detections.forEach((detection) => {
+        const bbox = detection.boundingBox;
+        context.beginPath();
+        context.rect(bbox.originX, bbox.originY, bbox.width, bbox.height);
+        context.lineWidth = 2;
+        context.strokeStyle = "blue";
+        context.stroke();
+
+        detection.keypoints.forEach((keypoint) => {
+          context.beginPath();
+          context.arc(keypoint.x, keypoint.y, 3, 0, 2 * Math.PI);
+          context.fillStyle = "red";
+          context.fill();
+        });
+      });
+    }
+
+    await initializeFaceDetector();
+    videoIn.requestVideoFrameCallback(predictWebcam);
+    const transformedStream = canvas.captureStream(30);
+
+    //----------------------- WEBRTC-----------------------------
+    const iceConf = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+    const pc = new RTCPeerConnection(iceConf);
+
+    // capture local MediaStream (from the webcam)
+    const tracks = transformedStream.getTracks();
+    tracks.forEach((track) => pc.addTrack(track, transformedStream));
+
+    // send offer to any peer connected on the signaling channel
+    pc.onicecandidate = ({ candidate }) => {
+      if (candidate === null) {
+        return;
+      }
+      ctx.pushEvent("ice", { candidate: candidate.toJSON(), type: "ice" });
+    };
+
+    // send offer to any peer connected on the signaling channel
+    pc.onnegotiationneeded = async () => {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      console.log("--> Offer created and sent");
+      ctx.pushEvent("offer", { sdp: offer });
+    };
+
+    // received from the remote peer (Elixir SFU server here) via UDP
+    pc.ontrack = ({ streams }) => {
+      console.log("--> Received remote track");
+      const echo = document.querySelector("#echo");
+      echo.srcObject = streams[0];
+    };
+
+    // received from the remote peer via signaling channel (Elixir server)
+    ctx.handleEvent("ice", async ({ candidate }) => {
+      await pc.addIceCandidate(candidate);
+    });
+
+    ctx.handleEvent("answer", async (msg) => {
+      console.log("--> handled Answer");
+      await pc.setRemoteDescription(msg);
+    });
+
+    // internal WebRTC listener, for information or other action...
+    pc.onconnectionstatechange = () => {
+      console.log("~~> Connection state: ", pc.connectionState);
+    };
+  }
+
+  run();
+}
+```

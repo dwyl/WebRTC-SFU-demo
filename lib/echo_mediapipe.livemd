@@ -10,7 +10,7 @@ Mix.install([
 
 ## What are we doing?
 
-We are illustrating the SFU server [`ExWebRTC`](https://github.com/elixir-webrtc/ex_webrtc) by broadcasting our webcam via `WebRTC`.
+We illustrate the SFU server [`ExWebRTC`](https://github.com/elixir-webrtc/ex_webrtc) by broadcasting our webcam via `WebRTC`.
 
 `ExWebRTC` is an Elixir port of the [WebRTC API](https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API).
 
@@ -250,7 +250,7 @@ Some notes on Kino.JS.
 A helper module to pull in the Javacsript code used in the "main.js" module from the Gihub repo.
 
 ```elixir
-defmodumle Assets do
+defmodule Assets do
   def fetch_js do
     github_js_url = "https://raw.githubusercontent.com/dwyl/WebRTC-SFU-demo/main/lib/assets/main_mediapipe.js"
     Req.get!(github_js_url).body
@@ -258,7 +258,7 @@ defmodumle Assets do
 
   def fetch_html do
     github_html_url = "https://raw.githubusercontent.com/dwyl/WebRTC-SFU-demo/main/lib/assets/index.html"
-    Req.get!(guthub_html_url).body
+    Req.get!(github_html_url).body
   end
 end
 ```
@@ -274,9 +274,7 @@ defmodule VideoLive do
 
   require Logger
 
-  @html """
-    Assets.fetch_html()
-  """
+  @html Assets.fetch_html()
 
   asset "main.css" do
   """
@@ -295,10 +293,7 @@ defmodule VideoLive do
   end
 
   asset "main.js" do
-    """
     Assets.fetch_js()
-
-    """
   end
 
   def new() do
