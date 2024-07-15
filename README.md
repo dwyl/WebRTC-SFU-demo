@@ -252,8 +252,24 @@ Once the connection is set, the client will receive RTP packets and digest them 
 We use a `Kino.JS.Live` since we obviously need a signaling channel (the Live WebSocket).
 
 > Kino expects us to code a "main.js" module that exports and `init` function
-> Github serves files from the repo but with a modified URL ("https://raw.githubusercontent.com...")
-> Kino does not load files from an URL, but from a location.
+ 
+> Kino does not load files from an URL, but from a location. We supply the following helper module to make the Livebook work from GitHub, and clean the code.
+
+```elixir
+defmodule Assets do
+  def fetch_js do
+    github_js_url = "https://raw.githubusercontent.com/dwyl/WebRTC-SFU-demo/main/lib/assets/main_mediapipe.js"
+    Req.get!(github_js_url).body
+  end
+
+  def fetch_html do
+    github_html_url = "https://raw.githubusercontent.com/dwyl/WebRTC-SFU-demo/main/lib/assets/index.html"
+    Req.get!(github_html_url).body
+  end
+end
+```
+
+The `Kino.JS.Live` module:
 
 ```elixir
 defmodule VideoLive do
@@ -264,19 +280,7 @@ defmodule VideoLive do
 
   require Logger
 
-  @html """
-    <div id="elt">
-      <figure>
-        <video id="source" width="500" height="500" muted autoplay playsinline></video>
-        <figcaption>Local webcam</figcaption>
-      </figure>
-      <br/>
-      <figure>
-        <video id="echo" width="500" height="500" autoplay muted playsinline></video>
-        <figcaption>Echo webcam</figcaption>
-      </figure>
-    </div>
-  """
+  @html Assets.fetch_html()
 
   asset "main.js" do
     Assets.fetch_js()
