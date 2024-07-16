@@ -16,9 +16,10 @@ We illustrate the SFU server [`ExWebRTC`](https://github.com/elixir-webrtc/ex_we
 
 This is a **low** latency protocole running on UDP.
 
-We are **not** using the "standard" peer-to-peer WebRTC connection but we are connecting the input feed - the browser's built-in webcam - to an SFU server written in Elixir.
+We are **not** using the "standard" peer-to-peer WebRTC connection but we are connecting the input feed - the browser's built-in webcam - to an SFU server written in Elixir. The SFU will forward the signal to other connected clients.
 
-<img width="427" alt="Screenshot 2024-06-05 at 05 33 47" src="https://github.com/user-attachments/assets/f111b98a-71b2-4fbf-bab1-309e4aecbeb6">
+<img width="427" alt="Screenshot 2024-06-05 at 05 28 47" src="https://github.com/user-attachments/assets/6c141dc0-1438-4470-a647-4b11af130f01">
+
 
 We transform the input directly in the browser. Since it is mandatory to start with the "hello world" of computer vision, namely face detection, we will use two libraries:
 
