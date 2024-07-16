@@ -18,6 +18,8 @@ This is a **low** latency protocole running on UDP.
 
 We are **not** using the "standard" peer-to-peer WebRTC connection but we are connecting the input feed - the browser's built-in webcam - to an SFU server written in Elixir.
 
+<img width="427" alt="Screenshot 2024-06-05 at 05 33 47" src="https://github.com/user-attachments/assets/f111b98a-71b2-4fbf-bab1-309e4aecbeb6">
+
 We transform the input directly in the browser. Since it is mandatory to start with the "hello world" of computer vision, namely face detection, we will use two libraries:
 
 - the library <mark>[`face-api`](https://www.npmjs.com/package/@vladmandic/face-api?activeTab=readme)</mark>.
