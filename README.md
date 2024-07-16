@@ -53,6 +53,19 @@ They will exchange SDP and ICE candidates.
 
 Once connected, the Elixir SFU will receive the streams from the `<video 1>` via a UDP connection. In this Echo configuration, it will send back the streams to the connected peer via UDP and display them in the other `<video 2>` element.
 
+The "magic" lines:
+
+```elixir
+def handle_info(
+      {:ex_webrtc, pc, {:rtp, client_track_id, _rid, packet}},
+      %{client_video_track: %{id: client_track_id, kind: :video}} = state
+    ) do
+  PeerConnection.send_rtp(pc, state.serv_video_track.id, packet)
+
+  {:noreply, state}
+end
+```
+
 <!-- livebook:{"break_markdown":true} -->
 
 ### Information flow
