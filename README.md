@@ -21,10 +21,12 @@ We are **not** using the "standard" peer-to-peer WebRTC connection but we are co
 <img width="427" alt="Screenshot 2024-06-05 at 05 28 47" src="https://github.com/user-attachments/assets/6c141dc0-1438-4470-a647-4b11af130f01">
 
 
-We transform the input directly in the browser. Since it is mandatory to start with the "hello world" of computer vision, namely face detection, we will use two libraries:
+We transform the input directly in the browser. Since it is mandatory to start with the "hello world" of computer vision, namely face detection, we showcase two libraries:
 
 - the library <mark>[`face-api`](https://www.npmjs.com/package/@vladmandic/face-api?activeTab=readme)</mark>.
 - the library <mark>[`MediaPipe`](https://github.com/tensorflow/tfjs-models/tree/master/face-detection)</mark> from [Tensorflow.js](https://www.tensorflow.org/js/models).
+
+  The `mediaPipe` library gives excellent results.
 
 The transformed stream will be sent to the SFU server via WebRTC.
 
@@ -32,13 +34,12 @@ The Elixir server will broadcast it back, into another `<video`> element of our 
 
 ## How to use this?
 
-You can run this first Livebook which uses `face-api`.
+You can run this first Livebook which uses `face-api`. You will notice that the results are not so good. You have a lot of negative findings.
 
 [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fdwyl%2FWebRTC-SFU-demo%2Fblob%2Fmain%2Flib%2Fecho_face_api.livemd)
 
-You will notice that the results are not so good. You have a lot of negative findings.
 
-The second Livebook uses `MediaPipe`. This is **much** more performant. Recall that each frame (30 fps) are detected and rebuilt and broadcasted to the Elixir server to broadcast back in the video element below the input.
+This second Livebook uses `MediaPipe`. This is **much** more performant. Recall that each frame (30 fps) are detected and rebuilt and broadcasted to the Elixir server to broadcast back in the video element below the input.
 
 [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fdwyl%2FWebRTC-SFU-demo%2Fblob%2Fmain%2Flib%2Fecho_mediapipe.livemd)
 
